@@ -600,7 +600,7 @@ public class HashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, jav
 
 3. Vector利用数组及扩容实现List，但Vector是一种线程安全的List结构，它的读写效率不如ArrayList，其原因是在该实现类内在方法上加上了同步关键字，Vector在默认情况下是以两倍速度递增。
 
-### _二十七、什么是synchronizedList,他和Vector有什么区别(待深入了解)？_
+### _二十七、什么是synchronizedList, 他和Vector有什么区别(待深入了解)？_
 
 1. Vector是java.util包中的一个类。 SynchronizedList是java.util.Collections中的一个静态内部类。在多线程的场景中可以直接使用Vector类，也可以使用Collections.synchronizedList(List list)方法来返回一个线程安全的List。
 
@@ -616,4 +616,264 @@ public class HashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, jav
 
 1. Arrays.asList：将数组转换成集合
 
+> 该方法不适用于基本数据类型（byte, short, int, long, float, double, boolean）
+> 该方法将数组与列表链接起来，当更新其中之一时，另一个自动更新
+> 不支持add和remove方法
+
+2. 基本数据类型使用此方法打印出来的都是地址值，而String类型的数组输出的是数组中的元素
+
+> public static void main(String[] args) {
+
+        // char
+        char[] mChar = { 'a', 'b' }; 
+        System.out.println("----->char" + Arrays.asList(mChar)); 
+        // int
+        int[] mInt = { 1, 23, 4, 5, 56, 77 }; 
+        System.out.println("---->int" + Arrays.asList(mInt)); 
+        // boolean
+        boolean[] mBoolean = { true, false }; 
+        System.out.println("---->boolean" + Arrays.asList(mBoolean)); 
+        // double
+        double[] mDouble = { 1.1, 2.4, 5.6, 7.8 }; 
+        System.out.println("---->double" + Arrays.asList(mDouble)); 
+        // String
+        String mString[] = { "orange", "apple", "lemon" }; 
+        List<String> list = Arrays.asList(mString); 
+        System.out.println("---->String" + Arrays.asList(mString)); 
+
+    }
+
+输出结果：
+char[[C@14ae5a5]
+int[[I@7f31245a]
+boolean[[Z@6d6f6e28]
+double[[D@135fbaa4]
+String[orange, apple, lemon]
+
+3. 总结说明：list的长度是根据mString[]获得的，长度已经确定，不能改变，如果往该集合添加或删除元素，都会报java.lang.UnsupportedOperationException异常，这是因为Arrays.asList() 返回java.util.Arrays.ArrayList，而不是java.util.ArrayList。Arrays.ArrayList和util.ArrayList都是继承AbstractList，remove，add等 method在AbstractList中是默认throw UnsupportedOperationException而且不作任何操作。util.ArrayList override这些method来对list进行操作，但是Arrays.ArrayList没有override remove()，add()等，所以throw UnsupportedOperationException。
+
 ### _二十九、Java中的Collection如何迭代？_
+
+1. Iterator
+
+public static void display(Iterator<Object> it) {
+
+    while(it.hasNext()) {
+        Object obj = it.next(); 
+        System.out.println(obj); 
+
+    }
+
+}
+
+2. forEach
+
+public static void display(Collection<Object> co) {
+
+    for (Object obj : co) {
+        System.out.print(obj); 
+
+    }
+
+}
+
+3.  for循环
+
+public static void display(Collection<Object> co) {
+
+    Object[] obj = co.toArray(new Object[co.size()]);
+    for (int i=0; i<obj.length; i++) {
+    System.out.print(s[i]);
+    }   
+
+}
+
+### _三十、Enumeration和Iterator接口的区别？_
+
+1. Enumeration速度是Iterator的2倍，同时占用更少的内存。但是，Iterator远远比Enumeration安全，因为其他线程不能够修改正在被iterator遍历的集合里面的对象。同时，Iterator允许调用者删除底层集合里面的元素，这对Enumeration来说是不可能的。
+
+package java.util; 
+
+ public interface Enumeration<E> {
+
+      boolean hasMoreElements();
+      E nextElement();
+
+ }
+ public interface Iterator<E> {
+
+    boolean hasNext();
+     E next();
+    void remove();
+    void forEachRemaining(Consumer<? super E> action);
+
+ }
+
+ 2. Enumeration枚举速度快，占用内存少，但是不是快速失败的，线程不安全。Iterator迭代允许删除底层数据
+
+### _三十一、Iterator和ListIterator之间有什么区别？_
+
+1. Iterator源码方法：
+
+> hasNext()：如果迭代器指向位置后面还有元素，则返回 true，否则返回false
+> next()：返回集合中Iterator指向位置后面的元素
+> remove()：删除集合中Iterator指向位置后面的元素
+
+ 2. ListIterator源码方法：
+
+> add(E e): 将指定的元素插入列表，插入位置为迭代器当前位置之前
+> hasNext()：以正向遍历列表时，如果列表迭代器后面还有元素，则返回 true，否则返回false
+> hasPrevious(): 如果以逆向遍历列表，列表迭代器前面还有元素，则返回 true，否则返回false
+> next()：返回列表中ListIterator指向位置后面的元素
+> nextIndex(): 返回列表中ListIterator所需位置后面元素的索引
+> previous(): 返回列表中ListIterator指向位置前面的元素
+> previousIndex()：返回列表中ListIterator所需位置前面元素的索引
+> remove(): 从列表中删除next()或previous()返回的最后一个元素（有点拗口，意思就是对迭代器使用hasNext()方法时，删除ListIterator指向位置后面的元素；当对迭代器使用hasPrevious()方法时，删除ListIterator指向位置前面的元素）
+> set(E e)：从列表中将next()或previous()返回的最后一个元素返回的最后一个元素更改为指定元素e
+
+3. 主要区别：
+
+> 两者都是迭代器，但是Iterator可以迭代所有的集合，ListIterator只能迭代List及其子类型的集合。
+> ListIterator有add方法，可以向List中添加对象，而Iterator不能。
+> ListIterator和Iterator都有hasNext()和next()方法，可以实现顺序向后遍历，但是ListIterator有hasPrevious()和previous()方法，可以实现逆向（顺序向前）遍历。Iterator不可以。
+> ListIterator可以定位当前索引的位置，nextIndex()和previousIndex()可以实现。Iterator没有此功能。
+> 都可实现删除操作，但是ListIterator可以实现对象的修改，set()方法可以实现。Iterator仅能遍历，不能修改。
+
+### _三十二、什么是fail-fast ，什么是fail-safe ，有什么区别？_
+
+1. fail-fast：快速失败，在用迭代器遍历一个集合对象时，如果遍历过程中对集合对象的内容进行了修改（增加、删除、修改），则会抛出Concurrent Modification Exception。
+
+> 原理：迭代器在遍历时直接访问集合中的内容，并且在遍历过程中使用一个modCount变量。集合在被遍历期间如果内容发生变化（即检测 modCount！=expectedmodCount），就会改变modCount的值。每当迭代器使用hashNext()/next()遍历下一个元素之前，都会检测modCount变量是否为expectedmodCount值，是的话就返回遍历；否则抛出异常，终止遍历。
+
+2. fail-safe：安全失败，采用安全失败机制的集合容器，在遍历时不是直接在集合内容上访问的，而是先复制原有集合内容，在拷贝的集合上进行遍历。
+
+> 原理：由于迭代时是对原集合的拷贝进行遍历，所以在遍历过程中对原集合所作的修改并不能被迭代器检测到，所以不会触发Concurrent Modification Exception。
+> 缺点：基于拷贝内容的优点是避免了Concurrent Modification Exception，但同样地，迭代器并不能访问到修改后的内容，即：迭代器遍历的是开始遍历那一刻拿到的集合拷贝，在遍历期间原集合发生的修改迭代器是不知道的。
+
+3. 注意：java.util包下的集合类都是快速失败的，不能在多线程下发生并发修改（迭代过程中被修改）。java.util.concurrent包下的容器都是安全失败，可以在多线程下并发使用，并发修改。
+
+### _三十三、如何在遍历的同时删除ArrayList中的元素？_
+
+1. 使用迭代器Iterator
+
+### _三十四、如何对一组对象进行排序？_
+
+1. 对象需要实现Comparable接口及compareTo方法
+
+2. 代码示例：
+
+@Data
+public class Person implements Comparable<Person>{
+
+    private int age;
+    private String name;
+
+    public Person(int age, String name){
+        this.name = name; 
+        this.age = age; 
+
+    }
+
+    @Override
+    public int compareTo(Person o) {
+        if( this.age < o.age ){
+            return -1; 
+        } else {
+            return this.name.compareTo(o.name); 
+        }
+
+    }
+
+    @Override
+    public String toString() {
+        return "person: " + this.name + " " + this.age; 
+
+    }
+
+}
+
+public static void main(String[] args) {
+
+        Person[] d = new Person[4]; 
+        d[0] = new Person(18, "orange"); 
+        d[1] = new Person(22, "w"); 
+        d[2] = new Person(21, "r"); 
+        d[3] = new Person(14, "h"); 
+        Arrays.sort(d); 
+        for( int i = 0 ; i < d.length ; i ++ ){
+            System.out.println(d[i]); 
+        }
+
+    }
+
+### _三十五、Comparable和Comparator有何区别？_
+
+1. Comparable定义在java.lang包里,意味着可以被比较的能力,因此某个类想要可以被排序,被比较大小,需要实现int compareTo(T o);这个接口，接口里只定义了这一个方法,代表了:传入一个对象,将对象和元素自身进行比较,如果元素自身大,返回1,相等返回0,元素自身小于参数则返回-1。
+
+2. Comparator定义与java.util包中,代表着一个角色,这个角色的功能是对传入的两个元素进行大小的比较,并且返回结果。主要方法为int compare(T o1, T o2)。
+
+3. 总结：Comparable实现内部自然排序，Comparator实现外部比较。
+
+### _三十六、Java中的集合使用泛型有哪些好处？_
+
+1. 类型安全。提供了编译时类型安全监测机制，该机制允许我们在编译时检测到非法的类型数据结构。
+
+2. 消除强制类型转换。泛型一个附带好处是，消除代码中许多强制类型的转换。减少代码出错率，更好阅读。
+
+### _三十七、当一个集合被作为参数传递给一个函数时，如何才能确保函数不能修改它？_
+
+1. 在作为参数传递之前，我们可以使用Collections.unmodifiableCollection(Collection c)方法创建一个只读集合，这将确保改变集合的任何操作都会抛出UnsupportedOperationException。
+
+### _三十八、通过给定集合得到一个synchronized的集合？_
+
+1. 可使用Collections.synchronizedCollection(Collection c)根据指定集合来获取一个synchronized（线程安全的）集合。
+
+### _三十九、Java中的Map主要有哪几种，之间有什么区别？_
+
+1. 主要有HashMap、HashTable、TreeMap、ConcurrentHashMap、LinkedHashMap、weakHashMap。
+
+2. 区别：
+
+> HashMap： 使用位桶和链表实现（最近的jdk1.8改用红黑树存储而非链表），它是线程不安全的Map，方法上都没有synchronize关键字修饰。
+> HashTable： hashTable是线程安全的一个map实现类，它实现线程安全的方法是在各个方法上添加了synchronize关键字。但是现在已经不再推荐使用HashTable了，因为现在有了ConcurrentHashMap这个专门用于多线程场景下的map实现类，其大大优化了多线程下的性能。
+> ConcurrentHashMap：（待补充）
+
+### _四十、遍历map的几种方式？_
+
+public static void main(String[] args) {
+
+        Map<String, String> map = new HashMap<String, String>(); 
+        map.put("1", "value1"); 
+        map.put("2", "value2"); 
+        map.put("3", "value3"); 
+        //第一种：普遍使用，二次取值
+        System.out.println("通过Map.keySet遍历key和value："); 
+        for (String key : map.keySet()) {
+            System.out.println("key= " + key + " and value= " + map.get(key)); 
+        }
+        //第二种：推荐，尤其是容量大时
+        System.out.println("通过Map.entrySet遍历key和value"); 
+        for (Map. Entry<String, String> entry : map.entrySet()) {
+            System.out.println("key= " + entry.getKey() + " and value= " + entry.getValue()); 
+        }
+        //第三种
+        System.out.println("通过Map.values()遍历所有的value，但不能遍历key"); 
+        for (String v : map.values()) {
+            System.out.println("value= " + v); 
+        }
+        //第四种
+        System.out.println("通过Map.entrySet使用iterator遍历key和value：");
+        Iterator<Map.Entry<String, String>> it = map.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, String> entry = it.next();
+            System.out.println("key= " + entry.getKey() + " and value= " + entry.getValue());
+        }
+
+    }
+
+### _四十一、hashmap与hashtable区别？_
+
+1. 区别：
+> hashtable继承自Dictionary类，而HashMap继承自AbstractMap类。但二者都实现了Map接口。
+> hashtable的方法是Synchronize的，线程安全，而hashmap反之。
+> hashmap可以有空的value，而hashtable的key和value都不能为空
