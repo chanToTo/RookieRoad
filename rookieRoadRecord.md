@@ -871,9 +871,98 @@ public static void main(String[] args) {
 
     }
 
+**建议使用entrySet进行遍历，可把key、value同时取出**
+
 ### _四十一、hashmap与hashtable区别？_
 
 1. 区别：
-> hashtable继承自Dictionary类，而HashMap继承自AbstractMap类。但二者都实现了Map接口。
-> hashtable的方法是Synchronize的，线程安全，而hashmap反之。
-> hashmap可以有空的value，而hashtable的key和value都不能为空
+
+> - hashtable继承自Dictionary类，而HashMap继承自AbstractMap类。但二者都实现了Map接口。
+> - hashtable的方法是Synchronize的，线程安全，而hashmap反之。
+> - hashmap可以有空的value，而hashtable的key和value都不能为空
+
+### _四十二、HashMap和ConcurrentHashMap的区别？_
+
+1. HashMap源码：
+
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
+
+        Node<K, V>[] tab; Node<K, V> p; int n, i; 
+        if ((tab = table) == null || (n = tab.length) == 0)
+            n = (tab = resize()).length; 
+        if ((p = tab[i = (n - 1) & hash]) == null)
+            tab[i] = newNode(hash, key, value, null); 
+        else {
+            Node<K, V> e; K k; 
+            if (p.hash == hash &&
+                ((k = p.key) == key || (key != null && key.equals(k))))
+                e = p; 
+            else if (p instanceof TreeNode)
+                e = ((TreeNode<K, V>)p).putTreeVal(this, tab, hash, key, value); 
+            else {
+                for (int binCount = 0; ; ++binCount) {
+                    if ((e = p.next) == null) {
+                        p.next = newNode(hash, key, value, null); 
+                        if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+                            treeifyBin(tab, hash); 
+                        break; 
+                    }
+                    if (e.hash == hash &&
+                        ((k = e.key) == key || (key != null && key.equals(k))))
+                        break; 
+                    p = e; 
+                }
+            }
+            if (e != null) { // existing mapping for key
+                V oldValue = e.value; 
+                if (!onlyIfAbsent || oldValue == null)
+                    e.value = value; 
+                afterNodeAccess(e); 
+                return oldValue; 
+            }
+        }
+        ++modCount; 
+        if (++size > threshold)
+            resize(); 
+        afterNodeInsertion(evict); 
+        return null; 
+
+    }
+
+### _四十三、同样是线程安全的MAP, HashTable和ConcurrentHashMap之间有什么区别？_
+
+### _四十四、hashCode()和equals()方法的作用，二者有什么关系？_
+
+1. 作用：比较两个对象是否一致。
+
+2. 关系：
+> 当hashCode判断相同时，equals判断未必相同
+> 当equals判断相同时，hashCode判断一定相同
+
+**注意：如果没有重写hashcode方法，使用Object自带的hashCode，无法保证两个对象equals的时候hashCode必须相等的条件，如果把对象放到散列存储结构的集合中，必须要重写。**
+
+### _四十五、HashMap和TreeMap的区别是什么？_
+
+1. 区别：
+> - HashMap是通过hashcode()对其内容进行快速查找的；HashMap中的元素是没有顺序的；TreeMap中所有的元素都是有某一固定顺序的，如果需要得到一个有序的结果，就应该使用TreeMap。
+> - HashMap和TreeMap都不是线程安全的。
+> - HashMap继承AbstractMap类；覆盖了hashcode() 和equals() 方法，以确保两个相等的映射返回相同的哈希值；TreeMap继承SortedMap类；他保持键的有序顺序。
+> - HashMap基于hash表实现的；使用HashMap要求添加的键类明确定义了hashcode() 和equals() （可以重写该方法）；为了优化HashMap的空间使用，可以调优初始容量和负载因子；TreeMap基于红黑树实现的；TreeMap就没有调优选项，因为红黑树总是处于平衡的状态。
+> - HashMap适用于Map插入，删除，定位元素；TreeMap适用于按自然顺序或自定义顺序遍历键（key）。
+
+### _四十六、所有类都可以作为Map的key么？有什么需要注意的？_
+
+> - 如果要将对象作为map的key，需要实现该对象的equals方法和hashCode方法。Object类的hashCode()方法返回这个对象存储的内存地址的编号。而equals()比较的是内存地址是否相等。
+
+### _四十七、了解Java的并发编程包么，并发集合类是什么，有哪些？_
+
+1. 
+
+
+### _四十八、介绍下CopyOnWriteArrayList,和普通的ArrayList存在哪些区别，以及，什么是CopyOnWrite？_ 
+
+
+### _四十九、什么是跳表(SkipList)？_ 
+
+
+### _五十、什么是ConcurrentSkipListMap，和ConcurrentHashMap有什么区别？_ 
