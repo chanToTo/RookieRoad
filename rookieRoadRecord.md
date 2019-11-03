@@ -883,59 +883,26 @@ public static void main(String[] args) {
 
 ### _四十二、HashMap和ConcurrentHashMap的区别？_
 
-1. HashMap源码：
+1. HashMap：
+> - HashMap默认不是线程安全的。
+> - HashMap是map接口的实例，是将键映射到值的对象，其中键和值都是对象，并且不能包含重复键，但可以包含重复值。
 
-final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
+2. ConcurrentHashMap：
+> - 采用CAS+Synchronized保证并发安全性，且synchronized关键字不是用在方法上而是用在了具体的对象上，实现了更小粒度的锁。
+> - ConcurrentHashMap采用了分段锁技术，其中Segment继承于ReentrantLock。不会像HashTable那样不管是put还是get操作都需要做同步处理，理论上ConcurrentHashMap支持CurrencyLevel(Segment 数组数量)的线程并发。每当一个线程占用锁访问一个Segment时，不会影响到其他的Segment。
 
-        Node<K, V>[] tab; Node<K, V> p; int n, i; 
-        if ((tab = table) == null || (n = tab.length) == 0)
-            n = (tab = resize()).length; 
-        if ((p = tab[i = (n - 1) & hash]) == null)
-            tab[i] = newNode(hash, key, value, null); 
-        else {
-            Node<K, V> e; K k; 
-            if (p.hash == hash &&
-                ((k = p.key) == key || (key != null && key.equals(k))))
-                e = p; 
-            else if (p instanceof TreeNode)
-                e = ((TreeNode<K, V>)p).putTreeVal(this, tab, hash, key, value); 
-            else {
-                for (int binCount = 0; ; ++binCount) {
-                    if ((e = p.next) == null) {
-                        p.next = newNode(hash, key, value, null); 
-                        if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
-                            treeifyBin(tab, hash); 
-                        break; 
-                    }
-                    if (e.hash == hash &&
-                        ((k = e.key) == key || (key != null && key.equals(k))))
-                        break; 
-                    p = e; 
-                }
-            }
-            if (e != null) { // existing mapping for key
-                V oldValue = e.value; 
-                if (!onlyIfAbsent || oldValue == null)
-                    e.value = value; 
-                afterNodeAccess(e); 
-                return oldValue; 
-            }
-        }
-        ++modCount; 
-        if (++size > threshold)
-            resize(); 
-        afterNodeInsertion(evict); 
-        return null; 
-
-    }
+**详情查看源码**
 
 ### _四十三、同样是线程安全的MAP, HashTable和ConcurrentHashMap之间有什么区别？_
+
+1. 区别：HashTable实现线程安全采用的方式是对方法都加上sychronized同步锁，get和put方法皆是如此，导致效率低下，而ConcurrentHashMap采用分段锁机制，在每一个segment上面加上ReentrantLock，多个线程不需要去等待同一把锁，提高效率。
 
 ### _四十四、hashCode()和equals()方法的作用，二者有什么关系？_
 
 1. 作用：比较两个对象是否一致。
 
 2. 关系：
+
 > 当hashCode判断相同时，equals判断未必相同
 > 当equals判断相同时，hashCode判断一定相同
 
@@ -944,6 +911,7 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
 ### _四十五、HashMap和TreeMap的区别是什么？_
 
 1. 区别：
+
 > - HashMap是通过hashcode()对其内容进行快速查找的；HashMap中的元素是没有顺序的；TreeMap中所有的元素都是有某一固定顺序的，如果需要得到一个有序的结果，就应该使用TreeMap。
 > - HashMap和TreeMap都不是线程安全的。
 > - HashMap继承AbstractMap类；覆盖了hashcode() 和equals() 方法，以确保两个相等的映射返回相同的哈希值；TreeMap继承SortedMap类；他保持键的有序顺序。
@@ -956,13 +924,76 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
 
 ### _四十七、了解Java的并发编程包么，并发集合类是什么，有哪些？_
 
-1. 
+一. 原子类型：
+1. 原子基本类型：
+> - AtomicBoolean
+> - AtomicInteger
+> - AtomicLong
 
+2. 常见方法：
+> - int addAndGet(int delta)： 以原子方式将输入的数值与实例中的值（AtomicInteger里的value）相加，并返回结果。
+> - boolean compareAndSet(int expect，int update)：如果输入的数值等于预期值，则以原子方式将该值设置为输入的值。
+> - int getAndIncrement()：以原子方式将当前值加1，注意，这里返回的是自增前的值。
+> - int getAndSet（int newValue）：以原子方式设置为newValue的值，并返回旧值。
+> - int getAndSet（int newValue）：以原子方式设置为newValue的值，并返回旧值。
 
-### _四十八、介绍下CopyOnWriteArrayList,和普通的ArrayList存在哪些区别，以及，什么是CopyOnWrite？_ 
+二. 闭锁操作
+1. CountDownLatch
+> 闭锁操作，在完成某些运算时，只有其他所有线程的运算全部完成时，当前运算才能继续执行，也就是说，可以设置主线程在其他分线程执行完成之后才执行。
 
+2. 常见方法：
+> - public void await() //调用await()方法的线程会被挂起，它会等待直到count值为0才继续执行
+> - public boolean await(long timeout, TimeUnit unit) //和await()类似，只不过等待一定的时间后count值还没变为0的话就会继续执行
+> - public void countDown() { }; //将count值减1
+> - CyclicBarrie(同步屏障)
+> - CyclicBarrier和CountDownLatch的区别：CountDownLatch和CyclicBarrier都能够实现线程之间的等待，只不过它们侧重点不同：CountDownLatch一般用于某个线程A等待若干个其他线程执行完任务之后，它才执行；而CyclicBarrier一般用于一组线程互相等待至某个状态，然后这一组线程再同时执行；另外，CountDownLatch是不能够重用的，而CyclicBarrier是可以重用的。
+
+三. 阻塞队列：
+1. 概念：阻塞队列（BlockingQueue）是一个支持两个附加操作的队列。这两个附加的操作是：在队列为空时，获取元素的线程会等待队列变为非空。当队列满时，存储元素的线程会等待队列可用。阻塞队列常用于生产者和消费者的场景，生产者是往队列里添加元素的线程，消费者是从队列里拿元素的线程。阻塞队列就是生产者存放元素的容器，而消费者也只从容器里拿元素。
+
+2. 常使用类：
+> - ArrayBlockingQueue：一个由数组结构组成的有界阻塞队列
+> - LinkedBlockingQueue：一个由链表结构组成的有界阻塞队列
+> - PriorityBlockingQueue：一个支持优先级排序的无界阻塞队列
+> - DelayQueue：一个使用优先级队列实现的无界阻塞队列
+> - SynchronousQueue：一个不存储元素的阻塞队列
+> - LinkedTransferQueue：一个由链表结构组成的无界阻塞队列
+> - LinkedBlockingDeque：一个由链表结构组成的双向阻塞队列
+
+四. 线程池
+1. 概念：线程池提供了一个线程队列，队列中保存着所有等待状态的线程，避免创建与销毁额外开销，提高了响应的速度。
+
+2. 线程池的体系结构：
+> java.util.concurrent.Executor：负责线程的使用与调度的根接口
+>   ExecutorService子接口：线程池的主要接口
+>       ThreadPoolExecutor 线程的实现类
+>       ScheduledExecutorService 子接口：负责线程的调度
+>           ScheduledThreadPoolExecutor：继承ThreadPoolExecutor，实现ScheduledExecutorService
+
+3. 工具类：Executors
+> ExecutorService newFixedThreadPool()：创建固定大小的线程池。
+> ExecutorService newCachedThreadPool()：缓存线程池，线程池的数量不固定，可以根据需求自动的更改数量。
+> ExecutorService newSingleThreadExecutor()：创建单个线程池，线程池中只有一个线程。
+> ScheduledExecutorService newScheduledThreadPool()：创建固定大小的线程，可以延迟或定时的执行任务。
+
+五. Runnable和Callable
+1. 说明：Runnable接口和Callable接口的实现类，都可以被ThreadPoolExecutor或ScheduledThreadPoolExecutor执行。它们之间的区别是Runnable不会返回结果，而Callable可以返回结果，callable需要FutureTask类支持，callable实现可用于闭锁。
+
+### _四十八、介绍下CopyOnWriteArrayList, 和普通的ArrayList存在哪些区别，以及，什么是CopyOnWrite？_ 
+1. CopyOnWriteArrayList：写入并复制，是一个ArrayList的线程安全的变体，原理是先copy出一个容器(可以简称副本)，再往新的容器里添加这个新的数据，最后把新的容器的引用地址赋值给了之前那个旧的的容器地址，但是在添加这个数据的期间，其他线程如果要去读取数据，仍然是读取到旧的容器里的数据。可避免在操作集合添加的同时读取会报修改异常，适合并发迭代操作，但是添加操作多时，效率低。
+
+2. 区别：
+> ArrayList迭代器在设计上是快速失败的，在用迭代器遍历一个集合对象时，如果遍历过程中对集合对象的内容进行了修改（增加、删除、修改），则会抛出Concurrent Modification Exception。
+> CopyOnWriteArrayList采用安全失败机制的集合容器，在遍历时不是直接在集合内容上访问的，而是先复制原有集合内容，在拷贝的集合上进行遍历。
+
+3. CopyOnWrite：线程安全，写时复制， 在往集合中添加数据的时候，先拷贝存储的数组，然后添加元素到拷贝好的数组中，然后用现在的数组去替换成员变量的数组（就是get等读取操作读取的数组）。这个机制和读写锁是一样的，但是比读写锁有改进的地方，那就是读取的时候可以写入的 ，这样省去了读写之间的竞争。适用多读取，少添加。
+
+**备注：java.util包下的集合类都是快速失败的，不能在多线程下发生并发修改（迭代过程中被修改）java.util.concurrent包下的容器都是安全失败，可以在多线程下并发使用，并发修改。**
 
 ### _四十九、什么是跳表(SkipList)？_ 
-
+1. 概念：使用“空间换时间”的算法，令链表的每个结点不仅记录next结点位置，还可以按照level层级分别记录后继第level个结点。在查找时，首先按照层级查找，比如：当前跳表最高层级为3，即每个结点中不仅记录了next结点（层级1），还记录了next的next（层级2）、next的next的next（层级3）结点。现在查找一个结点，则从头结点开始先按高层级开始查：head->head的next的next的next->。。。直到找到结点或者当前结点q的值大于所查结点，则此时当前查找层级的q的前一节点p开始，在p~q之间进行下一层级（隔1个结点）的查找......直到最终迫近、找到结点。此法使用的就是“先大步查找确定范围，再逐渐缩小迫近”的思想进行的查找。
 
 ### _五十、什么是ConcurrentSkipListMap，和ConcurrentHashMap有什么区别？_ 
+1. ConcurrentSkipListMap：TreeMap使用红黑树按照key的顺序（自然顺序、自定义顺序）来使得键值对有序存储，但是只能在单线程下安全使用；多线程下想要使键值对按照key的顺序来存储，则需要使用ConcurrentSkipListMap。底层是通过跳表来实现的。跳表是一个链表，但是通过使用“跳跃式”查找的方式使得插入、读取数据时复杂度变成了O（logn）。
+
+2. ConcurrentHashMap：采取了“锁分段”技术来细化锁的粒度：把整个map划分为一系列被成为segment的组成单元，一个segment相当于一个小的hashtable。这样，加锁的对象就从整个map变成了一个更小的范围——一个segment。ConcurrentHashMap线程安全并且提高性能原因就在于：对map中的读是并发的，无需加锁；只有在put、remove操作时才加锁，而加锁仅是对需要操作的segment加锁，不会影响其他segment的读写，由此，不同的segment之间可以并发使用，极大地提高了性能。
