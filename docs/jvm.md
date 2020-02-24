@@ -1,12 +1,12 @@
 ### 一、体系结构
 
-![image](../assets/jvm架构图.jpg)
+![image](../assets/jvm/jvm架构图.jpg)
 
 ### 二、类装载器
 
 > 类装载器ClassLoader：负责加载class文件，class文件在**文件开头有特定的文件标识（cafe babe...）**，将class文件字节码内容加载到内存中，并将这些内容转换成方法区中的运行时数据结构并且classLoder只负责class文件的加载，值与它是否可以运行，则由Execution Engine决定
 
-![image](../assets/classLoader.jpg)
+![image](../assets/jvm/classLoader.jpg)
 
 类装载器种类：
 
@@ -18,7 +18,7 @@
 用户自定义加载器:
 > java.lang.ClassLoader的子类，用户可以定制类的加载方式
 
-![image](../assets/classLoader2.jpg)
+![image](../assets/jvm/classLoader2.jpg)
 
 ClassLoader的双亲委派机制
 > 当一个类收到了类加载请求，它首先不会尝试自己去加载这个类，而是把这个请求委派给父类去完成，每一个层次类加载器都是如此，因此所有的加载请求都应该传送到启动类加载其中，只有当父类加载器反馈自己无法完成这个请求的时候（在它的加载路径下没有找到所需加载的class），子类加载器才会去尝试自己加载。采用双亲委派的一个好处就是比如加载位于rt.jar包中的类java.lang.Object，不管是哪个加载器加载这个类，最终都是委托给顶层的启动类加载器进行加载，这样就保证了使用不同的类加载器最终得到的都是同样一个Object对象
@@ -68,7 +68,7 @@ HotSpot是使用指针的方式来访问对象：Java堆中回存放访问类**�
 
 栈+堆+方法区的交互关系：
 
-![image](../assets/stack+heap_method交互关系.jpg)
+![image](../assets/jvm/stack+heap_method交互关系.jpg)
 
 > 针对于reference对象，存储在java堆中，但它区分模板的不同则是根据方法区中的对象类型数据
 
@@ -87,7 +87,7 @@ HotSpot是使用指针的方式来访问对象：Java堆中回存放访问类**�
 
 from区和to区，他们的位置不是固定的，每次GC后回交换，谁空谁是to区
 
-![image](../assets/jvm分区.jpg)
+![image](../assets/jvm/jvm分区.jpg)
 
 > - eden、SurvivorFrom复制到SurvivorTo，年龄+1：首先，当eden区满的时候会触发第一次GC，把还活着的对象拷贝到Survivor From区，当eden区再次触发GC的时候会扫描eden区和From区域，对这两个区域进行垃圾回收，经过这次回收后还存活的对象，则直接复制到To区域（如果有对象的年龄已经达到了老年的标准，则复制到老年代区），同时把这些对象的年龄+1。
 > - 清空eden、Survivor From：然后，清空eden和SurvivorFrom中的对象，也即复制之后有交换，谁空谁是to
@@ -98,7 +98,7 @@ from区和to区，他们的位置不是固定的，每次GC后回交换，谁空
 
 对于HotSpot虚拟机，很多开发者习惯将方法区称之为永久代（Permanent Gen），但严格本质上说两者不同，或者说使用永久代来实现方法区而已，永久代是方法区（相当于是一个接口interface）的一个实现，jdk1.7的版本中，已经将原本放在永久代的字符串常量池移走
 
-![image](../assets/jvm分区1.jpg)
+![image](../assets/jvm/jvm分区1.jpg)
 
 永久区（java7之前有）：
 
@@ -108,11 +108,11 @@ from区和to区，他们的位置不是固定的，每次GC后回交换，谁空
 
 java1.7
 
-![image](../assets/java7.jpg)
+![image](../assets/jvm/java7.jpg)
 
 java1.8
 
-![image](../assets/java8.jpg)
+![image](../assets/jvm/java8.jpg)
 
 Java8
 > 在java8中，永久代已经被移除，被一个称为元空间的区域所取代，元空间的本质和永久代类似。元空间与永久代之间最大的区别在于：永久代使用的JVM的堆内存，**但是java8以后的元空间并不在虚拟机中而是使用本机物理内存**，因此，默认情况下，元空间的大小仅受本地内存限制，类的元数据放入native memory，字符串池和类的静态变量放入java堆中，这样可以加载多少类的元数据就不再由maxPermSize控制，而由系统的实际可用空间来控制
@@ -146,15 +146,15 @@ VM option: -Xms1024M -Xmx1024M -XX:+PrintGCDetails
 
 GC回收日志Young区参数解释，Young区占总内存的1/3
 
-![image](../assets/Young GC参数含义.jpg)
+![image](../assets/jvm/Young%20GC参数含义.jpg)
 
 GC回收日志Old区参数解释
 
-![image](../assets/Full GC参数含义.jpg)
+![image](../assets/jvm/Full%20GC参数含义.jpg)
 
 ### 九、GC算法总体概述
 
-![image](../assets/GC.jpg)
+![image](../assets/jvm/GC.jpg)
 
 JVM在进行GC时，并非每次都对上面三个内存区域一起回收的，大部分时候回收的都是指新生代，因此GC按照回收的区域又分了两种类型，一种时普通GC（minor GC），一种时全局GC（major GC or FUll GC）
 
@@ -175,7 +175,7 @@ Minor GC 和 FUll GC的区别：
 
 复制算法原理：
 
-![image](../assets/复制算法原理.jpg)
+![image](../assets/jvm/复制算法原理.jpg)
 
 算法总结：
 
@@ -226,7 +226,7 @@ JMM
 
 > 由于JVM运行程序的实体是线程，而每个线程创建时JVM都会为其创建一个工作内存（有些地方成为栈空间），工作内存是每个线程的私有数据区域，而Java内存模型中规定所有变量都存储在主内存，主内存是共享内存区域，所有线程都可以访问，**但线程对变量的操作（读取赋值等）必须在工作内存中进行，首先将变量从主内存拷贝到的线程到自己的工作内存空间，然后对变量进行操作，操作完成后再将变量写回主内存**，不能直接操作主内存中的变量，各个线程中的工作内存中存储着主内存中的变量副本拷贝，因此不同的线程间无法访问对方的工作内存，线程间的通信（传值）必须通过主内存来完成，访问过程如下：
 
-![image](../assets/JMM访问过程.jpg)
+![image](../assets/jvm/JMM访问过程.jpg)
 
 特征：
 > - 可见性

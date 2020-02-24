@@ -23,7 +23,7 @@ hash的特点：
 
 > 当链表长度大于8时，并且hash表中所有元素达到64个之后，链表将转换成红黑树
 
-![image](assets/Hash Map Put().jpg)
+![image](../assets/hashmap/Hash Map Put().jpg)
 
 散列表的长度一定是2的次方数，eg 16 32 64等
 
