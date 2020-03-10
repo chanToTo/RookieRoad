@@ -341,3 +341,71 @@ Eg. 8/1-0.9 = 80个线程数
 7.jvm命令（死锁定位故障）
 > - jps近似ps -ef|grep xxx  查看进程，jps查看java进程，jps -l
 > - Jstack pid 查看具体代码故障位置
+
+### 六、深拷贝和浅拷贝
+
+参考：https://blog.csdn.net/u014727260/article/details/55003402
+
+1.浅拷贝
+> 实现clonable接口重写clone方法，拷贝出一个新的对象，与当前对象的地址不同，对象的基本类型实现值传递，引用类型实现引用传递，修改引用对象的值，那么当前clone对象的值也会被修改
+
+2.深拷贝
+> 当前对象需要实现clonable接口重写clone方法，并且当前对象里面的引用对象也要同理实现接口重写clone方法,达到拷贝对象与原先的对象互不干扰，不会涉及到修改引用对象就会印象原先对象的情况
+
+```xml
+@Data
+public class Test implements Cloneable{
+
+    public int id;
+    public String name;
+    private ChildClass childClass;
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    public static void main(String[] args) throws CloneNotSupportedException {
+        Test test = new Test();
+        test.setId(11);
+        test.setName("redis");
+        test.childClass = new ChildClass();
+        test.childClass.setId(13);
+        Test test1 = (Test) test.clone();
+        test1.childClass.setId(12);
+        System.out.println(test);
+        System.out.println(test1);
+        System.out.println(test1 == test);
+        System.out.println(test.name.hashCode());
+        System.out.println(test1.name.hashCode());
+        System.out.println(test.childClass.id);
+        System.out.println(test1.childClass.id);
+        System.out.println(test1.childClass.hashCode() == test.childClass.hashCode());
+    }
+
+    @Override
+    public String toString() {
+        return "Test{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
+    }
+}
+
+@Data
+class ChildClass{
+    public int id;
+    public String name;
+}
+```
+
+```xml
+Test{id=11, name='redis'}
+Test{id=11, name='redis'}
+false
+108389755
+108389755
+12
+12
+true
+```
