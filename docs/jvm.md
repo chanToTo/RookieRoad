@@ -87,7 +87,7 @@ HotSpot是使用指针的方式来访问对象：Java堆中会存放访问类**�
 
 参数配置：
 > - 默认的，新生代 ( Young ) 与老年代 ( Old ) 的比例的值为 1:2 ，可以通过参数 –XX:NewRatio 配置。
-> - 默认的，Edem : from : to = 8 : 1 : 1 ( 可以通过参数 –XX:SurvivorRatio 来设定)
+> - 默认的，Eden : from : to = 8 : 1 : 1 ( 可以通过参数 –XX:SurvivorRatio 来设定)
 > - Survivor区中的对象被复制次数为15(对应虚拟机参数 -XX:+MaxTenuringThreshold)
 
 为什么要分为Eden和Survivor?为什么要设置两个Survivor区？

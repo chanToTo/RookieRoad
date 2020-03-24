@@ -288,7 +288,7 @@ public class CallableDemo {
 
 线程池做的工作主要是控制运行的线程的数量，处理过程中将任务放入队列，然后在线程创建后启动这些任务，如果线程数量超过了最大数量，超出数量的线程排队等候，等其他线程执行完毕，再从队列中取出任务来执行。
 
-> 线程池的主要特点：线程服用，控制最大并发数，管理线程
+> 线程池的主要特点：线程复用，控制最大并发数，管理线程
 
 1.为什么要用线程池，优势：
 > - 降低资源消耗，通过重复利用已创建的线程降低线程创建和销毁造成的消耗
@@ -305,11 +305,17 @@ public class CallableDemo {
 ![image](../assets/java/线程池.jpg)
 > - corePoolSize：线程池中的常驻核心线程数（1.在创建线程池后，当有请求任务来之后，就会安排池中的线程去执行请求任务，近似理解为今日当值线程  2.当线程池中的线程数目的达到corePoolSize后，就会把到达的任务放到缓存队列当中）
 > - maximumPoolSize：线程池能够容纳同时执行的最大线程数，此值必须大于等于1
-> - keepAliveTime：多余的空闲线程的存活时间，当前线程数超过corePoolSize，当空闲时间达到KeepAliveTime值时，多余空闲线程会被销毁直至只剩下corePoolSize个线程为止（默认情况下：只有当线程池中的线程数大于corePoolSize时keepAliveTime才会起作用给，直到线程池中的线程数不大于corePoolSize）
+> - keepAliveTime：多余的空闲线程的存活时间，当前线程数超过corePoolSize，当空闲时间达到KeepAliveTime值时，多余空闲线程会被销毁直至只剩下corePoolSize个线程为止（默认情况下：只有当线程池中的线程数大于corePoolSize时keepAliveTime才会起作用，直到线程池中的线程数不大于corePoolSize）
 > - TimeUnit（unit）：keepAliveTime的单位
 > - workQueue：任务队列，被提交但尚未被执行的任务
 > - threadFactory：表示生成线程池中工作线程的线程工厂，用于创建线程，一般用默认的即可
 > - handler：拒绝策略，表示当队列满了并且工作线程大于等于最大线程数（maximumPoolSize）
+
+拒绝策略：
+> - AbortPolicy：丢弃任务，并抛出拒绝执行 RejectedExecutionException 异常信息。线程池默认的拒绝策略。必须处理好抛出的异常，否则会打断当前的执行流程，影响后续的任务执行
+> - DiscardPolicy：丢弃任务，不抛出异常
+> - DiscardOldestPolicy：丢弃最老的一个任务，并加入新的任务
+> - CallerRunsPolicy：用于被拒绝任务的处理程序，它直接在 execute 方法的调用线程中运行被拒绝的任务；如果执行程序已关闭，则会丢弃该任务
 
 4.线程池的底层工作原理：
 > - 在创建线程池后，等待提交过来的任务请求
