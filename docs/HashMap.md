@@ -37,3 +37,5 @@ hash的特点：
 > - modCount：当前哈希表结构修改次数
 > - threshold：扩容阈值，只能是2的次方数，当哈希表中的元素超过此阈值时触发扩容，扩容增强查找性能，因为桶中的链表有可能链化过于严重
 > - loadFactor：负载因子，threshold = capacity（数组长度） * loadFactor
+
+putVal(hash(key), key, value, false, true)：此处将key再一次hash是为了在长度不太大的时候，eg 16/32/64等，让高16位也参与到寻址的过程中
