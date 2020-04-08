@@ -1,4 +1,4 @@
-package com.orange.jvm.demo;
+package com.orange.juc.demo;
 
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;

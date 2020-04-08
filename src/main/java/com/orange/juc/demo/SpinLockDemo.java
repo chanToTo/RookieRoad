@@ -1,4 +1,4 @@
-package com.orange.jvm.demo;
+package com.orange.juc.demo;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;

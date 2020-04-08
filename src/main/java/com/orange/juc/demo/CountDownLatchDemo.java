@@ -1,6 +1,6 @@
-package com.orange.jvm.demo;
+package com.orange.juc.demo;
 
-import com.orange.jvm.enums.CountryEnum;
+import com.orange.juc.enums.CountryEnum;
 
 import java.util.concurrent.CountDownLatch;
 

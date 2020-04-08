@@ -1,4 +1,4 @@
-package com.orange.jvm.enums;
+package com.orange.juc.enums;
 
 import lombok.Getter;
 
