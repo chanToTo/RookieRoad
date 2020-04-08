@@ -1,9 +1,9 @@
-package com.orange.designPattern.FactoryPattern;
+package com.orange.designPattern.factoryPattern;
 
 /**
  * @author orangeC
  * @date 2019/10/18 17:45
- * @desc
+ * @desc 工厂模式
  */
 public class NvWaNiangNiang {
     public static void main(String[] args) {

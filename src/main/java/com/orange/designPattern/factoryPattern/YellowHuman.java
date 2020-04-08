@@ -1,4 +1,4 @@
-package com.orange.designPattern.FactoryPattern;
+package com.orange.designPattern.factoryPattern;
 
 /**
  * @author orangeC
