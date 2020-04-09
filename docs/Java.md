@@ -145,12 +145,17 @@ public class SpinLockDemo {
 > - CyclicBarrier：可循环使用的屏障，让一组线程到达一个屏障（也可以叫同步）时被阻塞，直到最后一个屏障时，屏障才会开门，所有被屏障拦截的线程才会继续操作。（设置初始值，做减法，才会继续执行后续的操作）
 > - Semaphore：信号量主要用于两个目的，一个时用于多个共享资源的互斥使用，另一个用于并发线程数的控制
 
-synchronize和lock的区别：
+synchronized和lock的区别：
 > - synchronize是关键字属于jvm层面，monitorenter（底层是通过monitor对象来完成，其实wait/notify等方法也依赖monitor对象只有在同步块或方法中才能调wait/notify等方法monitorexit代表出锁，lock是具体类（java.util.concurrent.locks.lock），是api层面的锁
 > - synchronize不需要用户手动释放锁，当synchronized代码执行完成后系统会自动让线程释放对锁的占用，ReenTrantLock则需要用户去手动释放锁，若没有主动释放锁，就有可能导致出现死锁现象。需要lock()和unlock()方法配合try/finally语句块来完成
 > - synchronized不可中断，除非抛出异常或者正常运行完成，ReetrantLock可中断：1.设置超时方法tryLock（long time，TimeUnit unit） 2. lockInterruptibly()放代码块中，调用interrupt方法可中断
 > - 加锁是否公平：synchronized非公平锁，ReetrantLock两者都可以，默认非公平锁，构造方法可以传入boolean值，true为公平锁，false为非公平锁
 > - 锁绑定多个条件condition：synchronized没有，ReentrantLock用来实现分组唤醒需要唤醒的的线程们，可以精确唤醒，而不是像synchronized要么随机唤醒一个线程，要么唤醒全部线程
+
+synchronized JVM原理
+> - 当t1线程获取synchronized锁住的对象时，t2线程尝试获取锁，发现锁已经被t1获取了，则t2线程会进入_cxq单项列表中，t3线程尝试获取锁也会同t2线程一样进入_cxq单项列表中，若此时t1线程执行至obj.wait();则该t1线程会进入WaitSet列表中，若t1线程执行完毕，再次由t1线程获取锁，则原先的_cxq列表中的t2和t3线程会进入EntryList中进行等待，t4线程若尝试获取锁，获取失败则重复原先t2、t3的步骤进入_cxq列表中
+
+![image](../assets/java/monitor.jpg)
 
 ### 二、阻塞队列
 
