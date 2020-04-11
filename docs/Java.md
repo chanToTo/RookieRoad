@@ -157,6 +157,11 @@ synchronized JVM原理
 
 ![image](../assets/java/monitor.jpg)
 
+对象头
+
+![image](../assets/java/objectHeader.jpg)
+
+
 ### 二、阻塞队列
 
 1.队列：
