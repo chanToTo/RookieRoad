@@ -216,29 +216,165 @@ B+tree索引树高度影响因素：
 > - rows：此次查询需要扫描的行数
 > - Extra：额外的信息
 
-索引扫描index < range < ref < eq_ref < const(system)
+type索引扫描index < range < ref < eq_ref < const(system)
 > - index：全索引扫描，需要扫描整颗索引树，eg. desc select countrycode from world.city
 > - range：索引范围查询，> < >= <= like in or between and（like例外说明匹配最左前缀索引，不可'%ch%,可'ch%'），eg. desc select * from city where id < 10 或 desc select * from city where countrycode like 'CH%'
 > - ref：辅助索引的等值查询，eg. desc select * from city where countrycode='CHN'
 > - eq_ref：针对多表连接中，非驱动表连接条件是主键或唯一键，eg. desc select country.name,city.name from city join country on city.countrycode = country.code where city.population='CHN'（country为非驱动表，country.code中的code为country表中的唯一键）
 > - const(或system)：聚簇索引等值查询，eg. desc select * from city where id=10 (id为主键)
 
+key_len索引覆盖长度如下：
 
+数字key_len：
+
+|  | not null | 没有not null |
+| ---- | ---- | ---- |
+| tinyint | 1 | 1 + 1 |
+| int | 4 | 4 + 1 |
+| bigint | 8 | 8 + 1 |
+
+字符key_len（utf8 -> 一个字符最大占3个字节，utf8mb4 -> 一个字符占4个字节）：
+
+|  | not null | 没有not null |
+| ---- | ---- | ---- |
+| char(10) | 3 * 10 | 3 * 10 + 1 |
+| varchar(10) | 3 * 10 + 2  | 3 * 10 + 2 + 1 |
  
+extra：
+> - using filesort：标识此次查询使用到了文件排序而没有使用索引去做排序，说明在查询中的排序操作：order by || group by || distinct..
 
+### 十、索引应用规范
 
+1.建索引原则
+> - 必须要有主键，如果没有可以作为主键条件的列，就创建无关列
+> - 经常作为where条件列，order by、group by、join on、distinct的业务列作为索引
+> - 最好使用唯一值多的列作为索引，如果索引列重复值较多，可以考虑使用联合索引
+> - 列值长度较长的索引列，建议使用前缀索引
+> - 降低索引条目，一方面不要创建没有用的索引，不常使用的索引清理，percona toolkit工具检验无用索引
+> - 索引维护要避免业务繁忙期
 
+2.导致索引失效的原因
+> - 未加索引条件，导致全表扫描，eg. select * from table
+> - 查询结果集是原表中的大部分数据，占比为15%-30%，达到这个区间，优化器会觉得没有必要走索引。
+>> - 优化器自行评估，与数据库的预读能力有关，以及一些参数有关
+> - 索引和表有自我维护的能力，对于表内容变化比较频繁的情况，统计信息（innodb_index_stats、innodb_table_stats两张表中存储一些表或者索引的统计信息，使用optimize table city进行刷新表的统计信息）不准确，过旧，有可能会出现索引失效
+>> - 一般采用删除索引并重建
+> - 查询条件使用函数在索引列上，或者对索引列进行运算，运算包括（+、-、*、/、!等）
+> - 隐式转换导致索引失效
+> - <> 、not in不走索引（辅助索引），对于主键索引的<>和not in还是会走主键索引的
+> - or、in可改成union，但不是一定，可使用不同的条件，分别测试效果
+> - like "%_" 百分号在前面进行模糊查询不走索引
 
+### 十一、优化器针对索引的算法
 
+自优化能力：
 
+1.mysql索引的自优化-AHI（Adaptive Hash Index 自适应hash索引，InnoDB独有）
+> - mysql的InnoDB引擎，能够创建只有BTree
+> - AHI作用：会自动统计索引页的使用情况，会自动评估热门的索引页生成hash表类型的索引，帮助InnoDB快速读取索引页，加快索引读取的速度，相当于索引的索引
 
+![image](../assets/mysql/innodb%20architecture.jpg)
 
+2.mysql索引的自优化-Change buffer -> 参考七处
 
+优化器算法：
 
+查看mysql优化器有哪些算法已开启：
+> select @@optimizer_switch
 
+修改算法是否开启？
+> - 修改my.cnf
+> - set global optimizer_switch='index_condition_pushdown=off,batched_key_access=off'; （单引号中为具体的算法名，以逗号分隔）
+> - hints
 
+1.ICP（index_condition_pushdown索引下推）
 
+> 作用：解决了联合索引只能部分应用的情况，为了减少没必要的数据页被扫描，将不走索引的条件，在engine层取数据之前做二次过滤，一些无关数据就会被提前过滤掉，减少IO次数
 
+![image](../assets/mysql/icp有无对比.jpg)
+
+2.MRR（multi range read多路读）
+
+> - 减少一部分随机IO
+> - 减少回表操作
+
+**未开启MRR之前**，辅助索引可会导致多次回表操作，以及多次IO和随机读问题
+
+![image](../assets/mysql/no%20mrr.jpg)
+
+**开启MRR之后**，中间设置一个缓冲区，将因辅助索引获取出来的结果集（id集）放入缓冲区中根据主键进行排序，可减少回表操作及随机读
+
+![image](../assets/mysql/mrr.jpg)
+
+MRR总结：
+> 辅助索引 -> 每次回表 -> 聚簇索引  转换成 辅助索引 -> 对id排序 -> 将排序完成id一次性取进行回表，减少回表操作 -> 聚簇索引
+
+3.SNLJ（simple nested-loop join）
+
+eg.
+> A join B on A.xx=B.yy where ..
+```shell script
+for eanch row in A matching range {
+  for each row in B {
+    A.xx = B.yy send to client
+  }
+}
+
+循环每次匹配到A的值就会拿该匹配值进B循环中做匹配
+```
+
+![image](../assets/mysql/SNLJ.jpg)
+
+参考：https://dev.mysql.com/doc/refman/5.7/en/nested-loop-joins.html
+
+4.BNLJ（Block Nested-Loop join）
+> 在t1和t2关联条件匹配时，不再一次一次进行循环，而是采用一次性将驱动表的关联值放入join buffer中去和非驱动表匹配，减少循环的次数。5.7版本默认BNLJ算法自动开启，BNLJ主要优化了SNLJ的CPU消耗，减少了IO次数
+
+劣势：
+> 在一个数据页上可能会重复读取多次
+
+5.BKA（Batched Nested Loops Join）
+
+> 在BNLJ的基础上，依赖MRR，会将join buffer中的条件进行排序，排序好的数据就可以去顺序读取非驱动表中连续的数据页
+
+![image](../assets/mysql/BKA.jpg)
+
+### 十二、存储引擎
+
+1.概念：
+> 相当于MySQL内置的文件系统。与linux中的文件系统打交道的层次结构
+
+2.MYSQL存储引擎种类：
+> - InnoDB（MySQL5.5版本以后默认的存储引擎，99%以上的业务表是InnoDB）
+> - MyISAM
+> - CSV
+> - MEMORY
+
+3.InnoDB核心特性（即与MyISAM的区别）：
+
+| 功能 | 支持 |
+| ---- | ---- |
+| MVCC多版本并发控制 | 是 |
+| clustered index群集索引（聚簇索引） | 是  |
+| 查询高速缓存 | 是  |
+| 事务 | 是  |
+| 锁定粒度 | 行  |
+| 多个缓冲区池 | 是  |
+| change buffer更改缓冲 | 是  |
+| AHI自适应散列索引 | 是  |
+| 更多的复制特性 | 是  |
+| 更新数据字典 | 是  |
+| 备份恢复（热备） | 是  |
+| 自动故障恢复 | 是  |
+
+4.存储引擎的管理命令
+> - select @@default_storage_engine 查看默认存储引擎
+> - set default_storage_engine=myisam 会话级别的修改存储引擎，不会影响其他的连接会话，重启之后失效
+> - set global default_storage_engine=myisam 针对全局的修改存储引擎（打开新会话），重启之后失效，弱需要永久生效，则需要修改etc/my.cnf文件
+> - show create table xx 确认每个表的引擎，或information_schema （select table_schema,table_name,engine from information_schema.tables where table_schema not in ('sys','mysql','information_schema','performance_schema')）
+> - alter table t1 engine=innodb 修改一个表的搜索引擎（在业务不繁忙的情况去做）
+
+5.MySQL存储引擎体系结构
 
 
 
