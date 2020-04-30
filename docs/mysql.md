@@ -300,11 +300,17 @@ extra：
 
 **未开启MRR之前**，辅助索引可会导致多次回表操作，以及多次IO和随机读问题
 
-![image](../assets/mysql/no%20mrr.jpg)
+![image](../assets/mysql/no_mrr.jpg)
 
 **开启MRR之后**，中间设置一个缓冲区，将因辅助索引获取出来的结果集（id集）放入缓冲区中根据主键进行排序，可减少回表操作及随机读
 
 ![image](../assets/mysql/mrr.jpg)
+
+可能会使用到MRR的场景：
+> - 索引类型为ref、eq_ref、range的时候
+> - 使用BKA算法的时候
+
+![image](../assets/mysql/use_mrr.jpg)
 
 MRR总结：
 > 辅助索引 -> 每次回表 -> 聚簇索引  转换成 辅助索引 -> 对id排序 -> 将排序完成id一次性取进行回表，减少回表操作 -> 聚簇索引
@@ -333,11 +339,11 @@ for eanch row in A matching range {
 劣势：
 > 在一个数据页上可能会重复读取多次
 
+![image](../assets/mysql/BNLJ.jpg)
+
 5.BKA（Batched Nested Loops Join）
 
 > 在BNLJ的基础上，依赖MRR，会将join buffer中的条件进行排序，排序好的数据就可以去顺序读取非驱动表中连续的数据页
-
-![image](../assets/mysql/BKA.jpg)
 
 ### 十二、存储引擎
 
@@ -376,8 +382,77 @@ for eanch row in A matching range {
 
 5.MySQL存储引擎体系结构
 
+MyISAM宏观结构：
+> - myt.frm：数据字典信息（列的定义和属性）
+> - myt.MYD：数据行
+> - myt.MYI：索引
 
+InnoDB宏观结构：
+> - city.ibd（独立表空间）：数据行，索引
+> - city.frm：数据字典信息
+> - ibdata1（共享表空间）：数据字典信息，UNDO、double write磁盘区域、change buffer磁盘区域（不同版本ibdata1中存储的数据不一样，如下）
+>> - 5.5版本的ibdata1中还会存储临时表数据+用户数据(数据行+索引)
+>> - 5.6版本的ibdata1中会存储临时表数据
+>> - 8.0版本的ibdata1取消存储数据字典信息，undo独立了
+> - ib_logfile0~ib_logfileN：InnoDB事务重做日志（redo log）
+> - ibtmp1：临时表空间（排序、分组、多表连接、子查询、逻辑备份等情况会使用临时表空间）
+> - ib_buffer_pool：正常关库的时候，存储缓冲区的热数据。好处在于它可以顺序io加载到内存中
 
+![image](../assets/mysql/InnoDB宏观结构.jpg)
 
+总结：
+> 针对InnoDB的表来说，仅仅是拷贝ibd和frm文件到新的数据库中，是无法正常使用的
 
+InnoDB微观结构：
 
+1.磁盘：
+
+表空间：
+> 表空间概念是引入Oracle数据库，起初是为了解决存储空间扩展的问题，MySQL5.5版本引入了共享表空间模式
+
+MySQL表中间类型：
+> - 共享表空间：在5.5版本引入了共享表空间（ibdata1），作为默认存储方式，用来存储：系统数据、日志、undo、临时表、用户数据和索引
+> - 独立表空间：在5.6版本默认独立表空间模式，单表单表空间，eg. city.ibd/country.ibd，文件系统仍旧会打
+> - 普通表空间：完全和Oracle一致的表空间管理模式
+> - undo表空间：存储undo logs（回滚日志）
+> - 临时表空间：存储临时表
+
+表空间管理：
+> - 用户数据默认的存储方式，都是独立表空间。独立表空间和共享表空间是可以互相切换的
+> - select @@innodb_file_per_table; 查看默认表空间模式，1代表独立表空间，0代表共享表空间
+> - set global innodb_file_per_table=0 切换表空间模式，需重新开启新会话，修改完成之后之影响新创建的表，重启mysql之后，此设置失效，若想永久改变，需要修改配置文件etc/my.cnf
+> - select @@innodb_data_file_path 扩展共享表空间的大小和个数，方法如下：
+>> - 方法1：初始化之前，需要在my.cnf加入以下配置：innodb_data_file_path=ibdata1:1G;ibdata2:1G:autoextend
+>> - 方法2：在已运行的数据库上扩展多个ibdata文件
+
+事务日志：
+> - redo log重做日志：用来存储，MySQL在走insert、update、delete（DML）操作时的数据页变化过程及版本号（LSN），属于物理日志，默认两个文件存储redo，是循环覆盖使用的
+> - undo logs回滚日志：用来存储回滚日志，可以理解为记录了每次操作的反操作，数据逻辑日志，提供功能：1.使用快照功能，提供InnoDB多版本并发读写、2.通过记录的反操作，提供回滚功能
+
+redo log文件位置：
+> /data/ib_logfile0~ib_logfileN
+
+redo log控制参数
+> - innodb_log_file_size=50331648 设置文件大小
+> - innodb_log_files_in_group=2 设置文件个数
+> - innodb_log_group_home_dir=./ 设置存储位置
+
+undo logs（5.7默认位置）
+> ibtmp1文件、ibdataN文件
+
+undo logs控制参数
+> - innodb_rollback_segments=128 设置回滚段的个数
+
+2.内存：
+
+数据内存区域：
+> - 数据内存区域：
+>> - 共享内存缓冲区域
+>>> - buffer_pool(缓冲区池)
+>>> - select @@InnoDB_buffer_pool_size
+>>> - 功能：缓冲数据页+索引页
+>> - 会话内存缓冲区域
+>>> - 参数：join_buffer_size、key_buffer_size、read_buffer_size、read_rnd_buffer_size、sort_buffer_size
+
+日志：
+> - innodb_log_buffer_size=16777216 负责redo日志的缓冲
