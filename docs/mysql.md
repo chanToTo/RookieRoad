@@ -456,3 +456,79 @@ undo logs控制参数
 
 日志：
 > - innodb_log_buffer_size=16777216 负责redo日志的缓冲
+
+### 十三、事务
+
+1.事务的标准特性
+> - Atomicity原子性：原子是物质的最小构成单元，具备不可再分的特性，在一个事务的工作单元中，所有标准事务语句（DML），要么全成功，要么全回滚
+> - Consistency一致性：事务发生前、中、后都应该保证数据是始终一致的状态，MySQL的各项功能的设计，都是最终要保证一致性
+> - Isolation隔离性：MySQL可以支持多事务并发工作的系统，A事务工作的时候，不能受到其他事务写操作的影响，查询不影响
+> - Durability持久性：当事务提交成功后，此次事务操作的所有数据 落盘，都要永久保存下去，不会因为数据实例发生故障，导致数据失效
+
+2.事务生命周期管理
+
+标准事务控制语句：
+> - begin/start transaction 开启事务
+> - commit 提交事务
+> - rollback 回滚事务
+
+标准的事务语句：
+> - insert/update/select/delete
+
+导致提交的非事务语句：
+> - DDL语句（ALTER、CREATE和DROP）
+> - DCL语句（GRANT、REMOVE和SET PASSWORD）
+> - 锁定语句（LOCK TABLES 和 UNLOCK TABLES）
+
+导致隐式提交的语句实例：
+> - TRUNCATE TABLE
+> - LOAD DATA INFILE
+> - SELECT FOR UPDATE
+
+隐式回滚：
+> - 会话关闭
+> - 数据库宕机
+> - 事务语句执行失败
+
+3.InnoDB事务的ACID如何保证
+
+相关名词：
+> - 重做日志:
+>> - redo log：ib_logfile0~N 48M，轮询使用，记录的是数据页的变化
+>> - redo log buffer：redo内存区域 
+> - 数据页存储位置
+>> - ibd：存储数据行和索引
+>> - buffer pool：缓冲区池，数据页和索引页的缓冲
+> - LSN日志序列号：MySQL每次数据库启动，都会比较磁盘数据页和redo log的LSN，必须要求两者LSN一致数据库才能正常启动
+> - WAL：write ahead log日志优先数据页，写（异步）的方式实现持久化，先写日志，再写磁盘
+> - 脏页：内存脏页，内存中发生了修改，没回写入到磁盘之前，我们把内存页称之为脏页
+> - CKPT：Checkpoint，检查点，就是将脏页刷写到磁盘的动作
+> - TXID：事务号，InnoDB会为每一个事务生成一个事务号，伴随着整个事务生命周期
+> - UNDO：ibdata1，存储了事务工作过程中的回滚信息
+
+相关管理命令：
+> - select @@autocommit 查看事务是否开启提交
+> - set global autocommit=0 临时设置不开启自动提交，重新开启会话生效
+> - vim /etc/my.cnf -> autocommit=0 修改配置文件永久设置事务不开启自动提交，重启数据库生效
+> - innodb_flush_log_at_trx_commit = 0/1/2 默认1
+>> - 1：在每次事务提交时，会立即刷新redo到磁盘，commit才能成功
+>> - 0：每秒刷新日志到os cache，再fsync异步到磁盘，异常宕机时，会有可能导致丢失1s内的事务
+>> - 2：每次事务提交，都立即刷新redo buffer到os cache，再每秒fsync()磁盘，异常宕机时，会有可能导致丢失1s内的事务
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
