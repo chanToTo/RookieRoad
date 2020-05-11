@@ -44,7 +44,7 @@
 >>> - -p pid进程使用cpu的时间
 >>> - -o 该参数后是用户自定义格式
 > - 将需要的线程ID转换为16进制格式（英文小写格式）： printf "%x\n" 有问题的pid对应的16进制的线程号
-    jstack pid | grep 16进制线程号 -A90
+> - jstack pid | grep 16进制线程号 -A90
 
 查看主机名
 > hostname
