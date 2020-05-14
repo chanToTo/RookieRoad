@@ -88,6 +88,20 @@ public class DoubleCheckSingleton {
 ### 十六、git merge和git rebase的区别
 > - git merge branch会把branch分支的差异内容pull到本地，然后与本地分支的内容一并形成一个committer对象提交到主分支上，合并后的分支与主分支一致
 > - git rebase branch会把branch分支优先合并到主分支，然后把本地分支的commit放到主分支后面，合并后的分支就好像从合并后主分支又拉了一个分支一样，本地分支本身不会保留提交历史
-
+### 十七、eureka和zookeeper注册中心有哪些区别（AP CP  zookeeper选举）
+### 十八、http和tcp有什么关系，层级结构在哪一层
+### 十九、了解saas的租户模式吗
+### 二十、synchronized和reentranrlock的区别
+### 二十一、reentrantlock的底层实现原理、是怎么样判断拿不拿锁的、公平和非公平锁的体现（状态，AQS队列）
+### 二十二、了解juc下的哪些类
+### 二十三、atomic是怎么实现的
+### 二十四、concurrenthashmap1.7和1.8的区别，为什么要cas+synchronized，目的在哪（cas预估值为空）
+### 二十五、http协议的线程模型
+### 二十六、了解tomcat哪些内容
+### 二十七、spring bean的生命周期
+### 二十八、如果我需要对bean做一些自定义操作应该如何实现
+### 二十九、spring加注解是如何实现加了注解就有用的
+### 三十、aop有哪些动态代理，如何实现？你要看他怎么实现的如何看（字节码）
+### 三十一、G1、cms垃圾收集器的实现以及区别，适用场景（内存大使用G1）
 
 
