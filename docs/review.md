@@ -135,24 +135,107 @@ HTTP和TCP的区别：
 
 ### 二十一、reentrantLock的底层实现原理、是怎么样判断拿不拿锁的、公平和非公平锁的体现（状态，AQS队列）
 
+参考：https://www.cnblogs.com/weiqihome/p/9665718.html
+
+AQS：
+> - AbstarctQueuedSynchronizer简称AQS，是一个用于构建锁和同步容器的框架。事实上concurrent包内许多类都是基于AQS构建的，例如ReentrantLock，Semphore，CountDownLatch，ReentrantReadWriteLock，FutureTask等。AQS解决了在实现同步容器时大量的细节问题
+> - AQS使用一个FIFO队列表示排队等待锁的线程，队列头结点称作“哨兵节点”或者“哑结点”，它不与任何线程关联。其他的节点与等待线程关联，每个阶段维护一个等待状态waitStatus
+> - AQS中还有一个表示状态的字段state，例如ReentrantLock用它来表示线程重入锁的次数，Semphore用它表示剩余的许可数量，FutureTask用它表示任务的状态。对state变量值的更新都采用CAS操作保证更新操作的原子性
+> - AbstractQueuedSynchronized继承了AbstractOwnableSynchronized，这个类只有一个变量：exclusiveOwnerThread，表示当前占用该锁的线程，并且提供了相应的get，set方法
+
+ReentrantLock：
+
+非公平锁：
+```shell script
+final void lock() {
+    if (compareAndSetState(0, 1))
+        setExclusiveOwnerThread(Thread.currentThread());
+    else
+        acquire(1);
+}
+# CAS操作，判断如果state为0，则表示当前锁没有被占有，如果是0则把它置为1，并且设置当前线程为该锁的独占线程，表示获取锁成功。
+# “非公平”即体现在这里，如果占用锁的线程刚释放锁，state置为0，而排队等待锁的线程还未唤醒时，新来的线程就直接抢占了该锁，那么就“插队”了。
+```
+
+公平锁：
+```shell script
+final void lock() {
+    acquire(1);
+}
+# 公平锁，直接入队列
+```
+
 ### 二十二、了解juc下的哪些类
-> - Atomic、concurrentHashMap、ReentrantLock
-### 二十三、Atomic是怎么实现的
-### 二十四、concurrentHashMap1.7和1.8的区别，为什么要cas+synchronized，目的在哪（cas预估值为空）
-### 二十五、http协议的线程模型
-### 二十六、了解tomcat哪些内容
-### 二十七、spring bean的生命周期
-### 二十八、如果我需要对bean做一些自定义操作应该如何实现
-### 二十九、spring加注解是如何实现加了注解就有用的
-### 三十、aop有哪些动态代理，如何实现？你要看他怎么实现的如何看（字节码）
-### 三十一、G1、cms垃圾收集器的实现以及区别，适用场景（内存大使用G1）
-### 三十二、如何处理分布式事务
-### 三十三、导致系统出现死锁的情况
+> Atomic、ConcurrentHashMap、ReentrantLock
+> - Atomic包下的实现使用CAS
+> - ConcurrentHashMap使用CAS+Synchronized
+> - ReentrantLock实现（公平锁/非公平锁、state、cas）
+### 二十三、ConcurrentHashMap1.7和1.8的区别，为什么要cas+synchronized，目的在哪（cas预估值为空）
+
+ConcurrentHashMap 1.7：
+> 使用分段锁机制，采用Segment + HashEntry的方式进行实现，分为16个segment并加上ReentrantLock
+
+ConcurrentHashMap 1.8
+> 放弃了Segment臃肿的设计，取而代之的是采用Node + CAS + Synchronized来保证并发安全进行实现
+> - 使用cas传入预估值为null，如果节点为null则证明当前位置还没有被占有，就设置值
+> - 在cas失败后，cas升级为synchronized
+
+> 如果在put元素的时候，当前put的node一直都是null的情况下，就会一直使用cas去做put操作，cas不会升级为synchronized重量级锁的情况下又能实现并发安全的添加数据，性能消耗低
+
+ConcurretnHashMap1.8 put过程：
+> - 如果没有初始化就先调用initTable（）方法来进行初始化过程
+> - 如果没有hash冲突就直接CAS插入
+> - 如果还在进行扩容操作就先进行扩容
+> - 如果存在hash冲突，就加锁来保证线程安全，这里有两种情况，一种是链表形式就直接遍历到尾端插入，一种是红黑树就按照红黑树结构插入
+> - 最后一个如果该链表的数量大于阈值8并且整个table的元素个数达到64个，就要先转换成黑红树的结构，break再一次进入循环(阿里面试官问题，默认的链表大小，超过了这个值就会转换为红黑树)
+> - 如果添加成功就调用addCount（）方法统计size，并且检查是否需要扩容
+
+### 二十四、http协议的线程模型
+### 二十五、了解tomcat哪些内容
+
+Tomcat Server处理一个HTTP请求的过程：
+> - 用户点击网页内容，请求被发送到本机端口8080，被在那里监听的Coyote HTTP/1.1 Connector获得
+> - Connector把该请求交给它所在的Service的Engine来处理，并等待Engine的回应
+> - Engine获得请求localhost/test/index.jsp，匹配所有的虚拟主机Host
+> - Engine匹配到名为localhost的Host（即使匹配不到也把请求交给该Host处理，因为该Host被定义为该Engine的默认主机），名为localhost的Host获得请求/test/index.jsp，匹配它所拥有的所有的Context。Host匹配到路径为/test的Context（如果匹配不到就把该请求交给路径名为“ ”的Context去处理）
+> - path=“/test”的Context获得请求/index.jsp，在它的mapping table中寻找出对应的Servlet。Context匹配到URL PATTERN为*.jsp的Servlet,对应于JspServlet类
+> - 构造HttpServletRequest对象和HttpServletResponse对象，作为参数调用JspServlet的doGet（）或doPost（）.执行业务逻辑、数据存储等程序
+> - Context把执行完之后的HttpServletResponse对象返回给Host
+> - Host把HttpServletResponse对象返回给Engine
+> - Engine把HttpServletResponse对象返回Connector
+> - Connector把HttpServletResponse对象返回给客户Browser
+
+### 二十六、spring bean的生命周期
+> - 实例化bean：对于BeanFactory容器，当客户向容器请求一个尚未初始化的bean时，或初始化bean的时候需要注入另一个尚未初始化的依赖时，容器就会调用createBean进行实例化。对于ApplicationContext容器，当容器启动结束后，通过获取BeanDefinition对象中的信息，实例化所有的bean
+> - 设置对象属性（依赖注入）：实例化后的对象被封装在BeanWrapper对象中，紧接着，Spring根据BeanDefinition中的信息 以及 通过BeanWrapper提供的设置属性的接口完成依赖注入。
+> - 处理Aware接口：Spring会检测该对象是否实现了xxxAware接口，并将相关的xxxAware实例注入给Bean：
+>> - 如果这个Bean已经实现了BeanNameAware接口，会调用它实现的setBeanName(String beanId)方法，此处传递的就是Spring配置文件中Bean的id值
+>> - 如果这个Bean已经实现了BeanFactoryAware接口，会调用它实现的setBeanFactory()方法，传递的是Spring工厂自身
+>> - 如果这个Bean已经实现了ApplicationContextAware接口，会调用setApplicationContext(ApplicationContext)方法，传入Spring上下文
+> - BeanPostProcessor：如果想对Bean进行一些自定义的处理，那么可以让Bean实现了BeanPostProcessor接口，那将会调用postProcessBeforeInitialization(Object obj, String s)方法
+> - InitializingBean 与 init-method：如果Bean在Spring配置文件中配置了 init-method 属性，则会自动调用其配置的初始化方法
+> - 如果这个Bean实现了BeanPostProcessor接口，将会调用postProcessAfterInitialization(Object obj, String s)方法；由于这个方法是在Bean初始化结束时调用的，所以可以被应用于内存或缓存技术，以上步骤完成后，Bean就已经被正确创建了，之后就可以使用这个Bean了
+> - DisposableBean：当Bean不再需要时，会经过清理阶段，如果Bean实现了DisposableBean这个接口，会调用其实现的destroy()方法
+> - destroy-method：最后，如果这个Bean的Spring配置中配置了destroy-method属性，会自动调用其配置的销毁方法
+### 二十七、如果我需要对bean做一些自定义操作应该如何实现
+### 二十八、spring加注解是如何实现加了注解就有用的
+### 二十九、aop有哪些动态代理，如何实现？你要看他怎么实现的如何看（字节码）
+> - JDK动态代理，基于接口InvocationHandler的invoke方法，使用反射原理
+> - cglib动态代理，动态的生成一个使用类的子类作为代理对象
+### 三十、G1、cms垃圾收集器的实现以及区别，适用场景（内存大使用G1）
+
+G1：
+> 划分多个region区，做分代垃圾回收（含新生代和老年代）。更适用于内存大的机器
+
+CMS：
+> 老年代的垃圾收集器，适用于内存相对小的机器（和G1相比较）
+
+### 三十一、如何处理分布式事务
+### 三十二、导致系统出现死锁的情况
 
 死锁的出现需要同时满足以下四个条件：
 > - 互斥（Mutual Exclusion）：一次只能有一个进程使用资源。如果另一个进程请求该资源，则必须延迟请求进程，直到释放该资源为止
 > - 保持并等待（Hold and wait）：必须存在一个进程，该进程至少持有一个资源，并且正在等待获取其他进程当前所持有的资源
 > - 无抢占（No Preemption）：资源不能被抢占，也就是说，在进程完成其他任务之后，只能由拥有他的进程自动释放资源
 > - 循环等待（Circular Wait）：必须存在一组{p0，p1...pn}的等待进程，使p0等待p1持有的资源，p1等待由p2持有的资源，pn-1正在等待由pn持有的资源，而pn正在等待由p0持有的资源
-
 
