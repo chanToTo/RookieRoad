@@ -8,6 +8,16 @@
 >> - select city.name,country.name,city.population from city left join country on city.countrycode=country.code and city.population < 100
 > - right join：取右表的所有数据，加上左表中和右表有交集的数据
 
+**group by**
+
+> group by配合聚合函数（max(),min(),avg(),count(),sum(),group_concat()使用，碰到group by必然会有聚合函数）
+> - max()：最大值
+> - min()：最小值
+> - avg()：平均值
+> - count()：统计个数
+> - sum()：求和
+> - group_concat()：列转行
+
 ### 二、索引？
 
 参考：https://blog.csdn.net/tongdanping/article/details/79878302
